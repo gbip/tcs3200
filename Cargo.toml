@@ -1,0 +1,8 @@
+[package]
+name = "tcs3200"
+version = "0.1.0"
+authors = ["Christale Crouard <no@mail.com>, Paul Florence <perso@florencepaul.com>"]
+edition = "2018"
+
+[dependencies]
+embedded-hal = "0.2.2"
