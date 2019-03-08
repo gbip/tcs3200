@@ -1,46 +1,100 @@
 #![no_std]
 
-use nb::block;
-use embedded_hal::digital::*;
+//use embedded_hal::digital::*;
+use embedded_hal::prelude::*;
+use embedded_hal::digital::OutputPin;
+//use nb::*;
 
-let duration = 0;
+//Bibliothèque pour utiliser un capteur couleur tcs3200
+//
+//
+//     Capteur de couleur TCS3200 Vu de dessus
+//
+//     --------------------------
+//     |                        |
+//     |   RGB Color Sensor     |
+//     |                        |
+//     |     O          O       |
+//     |                        |
+//     |                        |
+//     |     O          O       |
+//     |                        |
+//     |                        |
+//     |                        |
+//     --------------------------
+//       |  |  |  |  |  |  |  |
+//       |  |  |  |  |  |  |  |
+//       S3 S2 S1 S0 L  O  G  V
+//                   e  u  N  C
+//                   d  t  D  C
+//
+//
+//
+//
 
-enum Color {
-    Red,
-    Green,
-    Blue,
+///Contient les 3 composantes d'une couleur échantillonées de 0 (noir) à 255 (blanc)
+pub struct Color {
+    pub Red : u32, // de 0 à 255
+    pub Green : u32,
+    pub Blue : u32,
 }
 
-
-//Lit la durée de d'une période de valeur opposée
-fn pulseIn(SensorOut : u32, value : bool){
-    let time : u32 = 0; //Chronometre
-
-    //On attend qu'un signal arrive
-    while hal::digital::InputPin::is_high(SensorOut) {}
-
-    //On chronometre (voir hal::capture)
+pub struct Hertz(u32);
 
 
-    return ;
+//La fonction hzToColor reçoit en arguments :
+//      fnRead --> Fonction de lecture de la fréquence (retourne des Hertz)
+// Test tout les filtres et retient le plus lumineux
+///La fonction hzToColor reçoit en argument les 4 pins de contrôle du capteur couleur ainsi qu'une fonction de lecture de la fréquence. Elle retourne un struct Color.
+pub fn hzToColor<S1,S2,S3,S4>(s0 : &mut S1, s1 : &mut S2, s2: &mut S3, s3: &mut S4, fnRead: &Fn() -> u32) -> Color
+    where
+        S1 : OutputPin,
+        S2 : OutputPin,
+        S3 : OutputPin,
+        S4 : OutputPin
+{
+    let mut color : Color = Color {
+        Red: 0,
+        Green: 0,
+        Blue: 0
+    };
+    let mut freqMax : u32;
+
+    color.Green = 0;
+    color.Blue = 0;
+    color.Red = 0;
+
+    s0.set_high();
+    s1.set_high();
+
+    //On lit les blancs
+    s2.set_high();
+    s3.set_low();
+    freqMax = fnRead();
+
+    //On lis le vert
+    s2.set_high();
+    s3.set_high();
+    color.Green = ((fnRead() as f32/freqMax as f32)*255.0) as u32 ;
+
+    //On lis le bleu
+    s2.set_low();
+    s3.set_high();
+    color.Blue = ((fnRead() as f32/freqMax as f32)*255.0) as u32;
+
+    //On lis le rouge
+    s2.set_low();
+    s3.set_low();
+    color.Red = ((fnRead() as f32/freqMax as f32)*255.0) as u32;
+
+    s0.set_low();
+    s1.set_low();
+
+
+
+    color
 }
 
-//Retourne la couleur majoritaire
-fn read_color(s0 : InputPint, s1 : InputPint, s2: InputPint, s3: InputPint, SensorOut : Hertz) -> Color {
-    let couleur : Color;
-
-    //Initialisation
-    hal::digital::OutputPin::set_high(s0);
-    hal::digital::OutputPin::set_low(s1);
-
-    //Lecture
-    hal::digital::OutputPin::set_low(s2);
-    hal::digital::OutputPin::set_low(s3);
-
-    duration = pulseIn(SensorOut, false);
-
-    return couleur;
-}
 
 #[cfg(test)]
 mod tests {
